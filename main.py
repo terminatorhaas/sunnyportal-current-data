@@ -1,6 +1,7 @@
 import requests
 from smartplug import SmartPlug
 import json
+import time
 
 def main():
     f = open('config.json')
@@ -47,31 +48,45 @@ def main():
 
     s = requests.Session()
 
-    # Uncomment next lines if you want to use a edimax smartplug
-    #ip = config["spip"]
-    #smpas  = config["sppassword"]
-    #print(ip)
-    #print(smpas)
-    #p = SmartPlug(ip, ('admin', smpas))
+    #Uncomment next lines if you want to use a edimax smartplug
+    ip = config["spip"]
+    smpas  = config["sppassword"]
+    print(ip)
+    print(smpas)
+    p = SmartPlug(ip, ('admin', smpas))
 
-    response = s.post('https://www.sunnyportal.com/Templates/Start.aspx', headers=headers, data=data)
 
-    print(response.json())
+    while True:
+        try:
+            response = s.post('https://www.sunnyportal.com/Templates/Start.aspx', headers=headers, data=data)
 
-    # Do something with the insights gathered, for example turn on a smartplug for heating
-    pvproduct = (response.json()["PV"])
-    consumption = (response.json()["TotalConsumption"])
+            print(response.json())
 
-    if(pvproduct == None or consumption == None):
-        print("error")
-    else:
-        print("PV:" + str(pvproduct))
-        print("TotalConsumption:" + str(consumption))
+            # Do something with the insights gathered, for example turn on a smartplug for heating
+            pvproduct = (response.json()["PV"])
+            consumption = (response.json()["TotalConsumption"])
+            battery = (response.json()["BatteryChargeStatus"])
 
-        if (pvproduct-consumption) > 3000:
-            print("turn on the switch")
-            # Uncomment next lines if you want to use a edimax smartplug
-            #p.state= "ON"
+            if(pvproduct == None or consumption == None):
+                print("error")
+            else:
+                print("PV:" + str(pvproduct))
+                print("TotalConsumption:" + str(consumption))
+
+                if ((pvproduct-consumption) > 3000) and battery>=70:
+                    p.state= "ON"
+                    print("turning on")
+                elif (pvproduct-consumption) <= 0 or (battery<70 and (pvproduct-consumption)<5000):
+                    p.state="OFF"
+                    print("turning off")
+                elif (battery<70 and (pvproduct-consumption)>5000):
+                    p.state="ON"
+                    print("turning on")
+
+            time.sleep(60*5)
+        except Exception as e:
+            print("Error: " + str(e))
+            time.sleep(60*5)
 
     
 if __name__ =="__main__":
