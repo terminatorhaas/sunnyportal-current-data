@@ -18,5 +18,5 @@ Furthermore it demos how to use https://github.com/wendlers/ediplug-py to turn o
     "sppassword": ""
 }
 ```
-
-3. Execute main.py
+3. pip install requests
+4. Execute main.py
