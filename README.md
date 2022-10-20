@@ -8,7 +8,7 @@ Furthermore it demos how to use https://github.com/wendlers/ediplug-py to turn o
 
 1. Download or clone repository
 2. create a config.json file in the main folder containing email and password for the sunnyportal
-   (as well as the ip adress of your smartplug and its password) * not mandatory
+   as well as the ip adress of your smartplug and its password
 
 ```json
 {
@@ -18,5 +18,5 @@ Furthermore it demos how to use https://github.com/wendlers/ediplug-py to turn o
     "sppassword": ""
 }
 ```
-
-3. Execute main.py
+3. pip install requests
+4. Execute main.py
