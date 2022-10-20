@@ -1,93 +1,105 @@
-import requests
-from smartplug import SmartPlug
+from random import randint
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.chrome.options import Options
 import json
 import time
-
-def main():
-    f = open('config.json')
-    config = json.load(f)
-    print(config)
-
-    f.close()
-
-    email = config["email"]
-    password = config["password"]
-
-    print(email)
-    print(password)
-
-    headers = {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cache-Control': 'max-age=0',
-        'Connection': 'keep-alive',
-        'Origin': 'https://www.sunnyportal.com',
-        'Referer': 'https://www.sunnyportal.com/Templates/Start.aspx?logout=true',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'same-origin',
-        'Sec-Fetch-User': '?1',
-        'Upgrade-Insecure-Requests': '1',
-        'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36 RuxitSynthetic/1.0 v9119321939944316627 t8052286838287810618'
-    }
-
-    data = {
-        '__EVENTTARGET': '',
-        '__EVENTARGUMENT': '',
-        'ctl00$ContentPlaceHolder1$Logincontrol1$txtUserName': email,
-        'ctl00$ContentPlaceHolder1$Logincontrol1$txtPassword': password,
-        'ctl00$ContentPlaceHolder1$Logincontrol1$LoginBtn': 'Login',
-        'ctl00$ContentPlaceHolder1$Logincontrol1$RedirectURL': '/homemanager',
-        'ctl00$ContentPlaceHolder1$Logincontrol1$RedirectPlant': '',
-        'ctl00$ContentPlaceHolder1$Logincontrol1$RedirectPage': '',
-        'ctl00$ContentPlaceHolder1$Logincontrol1$RedirectDevice': '',
-        'ctl00$ContentPlaceHolder1$Logincontrol1$RedirectOther': '',
-        'ctl00$ContentPlaceHolder1$Logincontrol1$PlantIdentifier': '',
-        'ctl00$ContentPlaceHolder1$Logincontrol1$ServiceAccess': 'true'
-    }
-
-    s = requests.Session()
-
-    #Uncomment next lines if you want to use a edimax smartplug
-    ip = config["spip"]
-    smpas  = config["sppassword"]
-    print(ip)
-    print(smpas)
-    p = SmartPlug(ip, ('admin', smpas))
+import re
+from smartplug import SmartPlug
+import datetime as dt  
 
 
-    while True:
-        try:
-            response = s.post('https://www.sunnyportal.com/Templates/Start.aspx', headers=headers, data=data)
+def isNowInTimePeriod(): 
+    now = dt.datetime.now()
+    print(now)
+    current_time = now.strftime("%H:%M:%S")
+    start = '06:00:00'
+    end = '21:19:20'
+    if current_time > start and current_time < end:
+        return True
+    return False
 
-            print(response.json())
 
-            # Do something with the insights gathered, for example turn on a smartplug for heating
-            pvproduct = (response.json()["PV"])
-            consumption = (response.json()["TotalConsumption"])
-            battery = (response.json()["BatteryChargeStatus"])
+f = open('config.json')
+config = json.load(f)
+print(config)
 
-            if(pvproduct == None or consumption == None):
-                print("error")
-            else:
-                print("PV:" + str(pvproduct))
-                print("TotalConsumption:" + str(consumption))
+f.close()
 
-                if ((pvproduct-consumption) > 3000) and battery>=70:
-                    p.state= "ON"
-                    print("turning on")
-                elif (pvproduct-consumption) <= 0 or (battery<70 and (pvproduct-consumption)<5000):
-                    p.state="OFF"
-                    print("turning off")
-                elif (battery<70 and (pvproduct-consumption)>5000):
-                    p.state="ON"
-                    print("turning on")
+options = Options()
+#options.add_argument('--headless')
+options.add_argument('window-size=1920x1080')
+user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36'
+options.add_argument(f'user-agent={user_agent}')
 
-            time.sleep(60*5)
-        except Exception as e:
-            print("Error: " + str(e))
-            time.sleep(60*5)
+email = config["email"]
+password = config["password"]
 
-    
-if __name__ =="__main__":
-    main()
+#Uncomment next lines if you want to use a edimax smartplug
+ip = config["spip"]
+smpas  = config["sppassword"]
+print(ip)
+print(smpas)
+p = SmartPlug(ip, ('admin', smpas))
+
+
+day= False
+driver = webdriver.Chrome('./chromedriver', chrome_options=options)
+
+while True:
+    try:
+        #time.sleep(randint(300,600))
+        if isNowInTimePeriod():
+
+            if day == False:
+                driver = webdriver.Chrome('./chromedriver', chrome_options=options)
+                driver.get("https://www.sunnyportal.com/Templates/Start.aspx")
+                time.sleep(3)
+                driver.find_element(By.ID,"txtUserName").send_keys(email)
+                time.sleep(2)
+                driver.find_element(By.ID,"txtPassword").send_keys(password)
+                time.sleep(2)
+                driver.find_element(By.ID,"onetrust-reject-all-handler").click()
+                time.sleep(2)
+                driver.find_element(By.ID,"ctl00_ContentPlaceHolder1_Logincontrol1_LoginBtn").click()
+                day = True
+            driver.refresh()
+            time.sleep(randint(200,300  ))
+            driver.find_element(By.ID,"ctl00_ContentPlaceHolder1_CurrentStatusLabel").click()
+            element = WebDriverWait(driver, 10).until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, 'batteryStatus-pv')))
+
+            pvproduct = ((element.text).splitlines()[1])
+            print(pvproduct)
+
+            element = WebDriverWait(driver, 10).until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, 'batteryStatus-consumption')))
+
+            consumption = ((element.text).splitlines()[1])
+            print(consumption)
+
+            element = WebDriverWait(driver, 10).until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, 'batteryStatus-battery')))
+
+            battery =(re.findall(r'\d+', ((element.text).splitlines()[3]))[0])
+            print(battery)
+
+            if (float(pvproduct)-float(consumption) > 3.0) and float(battery)>=70.0:
+                p.state= "ON"
+                print("turning on")
+            elif float(pvproduct)-float(consumption) <= 0.0 or (float(battery)<70 and float(pvproduct-consumption)<5.0):
+                p.state="OFF"
+                print("turning off")
+            elif (float(battery)<70.0 and float(pvproduct)-float(consumption)>5.0):
+                p.state="ON"
+                print("turning on")
+
+        elif day==True:
+            driver.close()
+            day=False
+        else:
+            time.sleep(randint(300,600))
+    except:
+        print("Error")
+        day=False
+
