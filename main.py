@@ -40,14 +40,61 @@ password = config["password"]
 
 #Uncomment next lines if you want to use a edimax smartplug
 ip = config["spip"]
+ip2 = config["spip2"]
 smpas  = config["sppassword"]
 print(ip)
 print(smpas)
-p = SmartPlug(ip, ('admin', smpas))
+heizstab = SmartPlug(ip, ('admin', smpas))
+heizung = SmartPlug(ip2, ('admin', smpas))
 
+pvproduct = 0
+consumption = 0
+battery = 0
 
 day= False
 driver = webdriver.Chrome('./chromedriver', chrome_options=options)
+
+def heizstab():
+    if (float(pvproduct)-float(consumption) > 3.0) and float(battery)>=70.0:
+        heizstab.state= "ON"
+        print("turning on heizstab")
+    elif float(pvproduct)-float(consumption) <= 0.0 or (float(battery)<70 and float(pvproduct-consumption)<5.0):
+        heizstab.state="OFF"
+        print("turning off heizstab")
+    elif (float(battery)<70.0 and float(pvproduct)-float(consumption)>5.0):
+        heizstab.state="ON"
+        print("turning on heizstab")
+
+def heizung():
+    if heizstab.state=="OFF":
+        heizung.state= "OFF"
+        return
+    if (float(pvproduct)-float(consumption) > 2.0) and float(battery)>=70.0:
+        heizung.state= "ON"
+        print("turning on heizstab")
+    elif float(pvproduct)-float(consumption) <= 0.0 or (float(battery)<70 and float(pvproduct-consumption)<4.0):
+        heizung.state="OFF"
+        print("turning off heizstab")
+    elif (float(battery)<70.0 and float(pvproduct)-float(consumption)>4.0):
+        heizung.state="ON"
+        print("turning on heizstab")
+
+def getCurrentData():
+    #Current Data
+    driver.find_element(By.ID,"ctl00_ContentPlaceHolder1_CurrentStatusLabel").click()
+    element = WebDriverWait(driver, 10).until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, 'batteryStatus-pv')))
+
+    pvproduct = ((element.text).splitlines()[1])
+    print(pvproduct)
+
+    element = WebDriverWait(driver, 10).until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, 'batteryStatus-consumption')))
+
+    consumption = ((element.text).splitlines()[1])
+    print(consumption)
+
+    element = WebDriverWait(driver, 10).until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, 'batteryStatus-battery')))
+
+    battery =(re.findall(r'\d+', ((element.text).splitlines()[3]))[0])
 
 while True:
     try:
@@ -67,32 +114,23 @@ while True:
                 driver.find_element(By.ID,"ctl00_ContentPlaceHolder1_Logincontrol1_LoginBtn").click()
                 day = True
             driver.refresh()
-            time.sleep(randint(200,300  ))
-            driver.find_element(By.ID,"ctl00_ContentPlaceHolder1_CurrentStatusLabel").click()
-            element = WebDriverWait(driver, 10).until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, 'batteryStatus-pv')))
+            
+            time.sleep(randint(60,100))
+            getCurrentData()
+            heizung()
+            time.sleep(8)
+            getCurrentData()
+            heizstab()
 
-            pvproduct = ((element.text).splitlines()[1])
-            print(pvproduct)
-
-            element = WebDriverWait(driver, 10).until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, 'batteryStatus-consumption')))
-
-            consumption = ((element.text).splitlines()[1])
-            print(consumption)
-
-            element = WebDriverWait(driver, 10).until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, 'batteryStatus-battery')))
-
-            battery =(re.findall(r'\d+', ((element.text).splitlines()[3]))[0])
-            print(battery)
-
-            if (float(pvproduct)-float(consumption) > 3.0) and float(battery)>=70.0:
-                p.state= "ON"
-                print("turning on")
-            elif float(pvproduct)-float(consumption) <= 0.0 or (float(battery)<70 and float(pvproduct-consumption)<5.0):
-                p.state="OFF"
-                print("turning off")
-            elif (float(battery)<70.0 and float(pvproduct)-float(consumption)>5.0):
-                p.state="ON"
-                print("turning on")
+            # if (float(pvproduct)-float(consumption) > 3.0) and float(battery)>=70.0:
+            #     heizstab.state= "ON"
+            #     print("turning on heizstab")
+            # elif float(pvproduct)-float(consumption) <= 0.0 or (float(battery)<70 and float(pvproduct-consumption)<5.0):
+            #     heizstab.state="OFF"
+            #     print("turning off heizstab")
+            # elif (float(battery)<70.0 and float(pvproduct)-float(consumption)>5.0):
+            #     heizstab.state="ON"
+            #     print("turning on heizstab")
 
         elif day==True:
             driver.close()
@@ -102,4 +140,3 @@ while True:
     except:
         print("Error")
         day=False
-
