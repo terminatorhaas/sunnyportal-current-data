@@ -50,16 +50,16 @@ smpas  = config["sppassword"]
 print(ip)
 print(smpas)
 heizstab = SmartPlug(ip, ('admin', smpas))
-heizung = SmartPlug(ip2, ('admin', smpas))
+heizungstecker = SmartPlug(ip2, ('admin', smpas))
 
-pvproduct = 0
-consumption = 0
-battery = 0
+pvproduct = "0"
+consumption = "0"
+battery = "0"
 
 day= False
 driver = webdriver.Chrome(os.path.dirname(__file__) + '/chromedriver', options=options)
 
-def heizstab():
+def heizstabt():
     if (float(pvproduct)-float(consumption) > 3.0) and float(battery)>=70.0:
         heizstab.state= "ON"
         print("turning on heizstab")
@@ -71,17 +71,21 @@ def heizstab():
         print("turning on heizstab")
 
 def heizung():
+    print(heizstab.state)
     if heizstab.state=="OFF":
-        heizung.state= "OFF"
+        print("turn off heizung")
+        heizungstecker.state= "OFF"
+        time.sleep(3)
         return
+    
     if (float(pvproduct)-float(consumption) > 2.0) and float(battery)>=70.0:
-        heizung.state= "ON"
+        heizungstecker.state= "ON"
         print("turning on heizstab")
     elif float(pvproduct)-float(consumption) <= 0.0 or (float(battery)<70 and float(pvproduct-consumption)<4.0):
-        heizung.state="OFF"
+        heizungstecker.state="OFF"
         print("turning off heizstab")
     elif (float(battery)<70.0 and float(pvproduct)-float(consumption)>4.0):
-        heizung.state="ON"
+        heizungstecker.state="ON"
         print("turning on heizstab")
 
 def getCurrentData():
@@ -118,14 +122,13 @@ while True:
                 time.sleep(2)
                 driver.find_element(By.ID,"ctl00_ContentPlaceHolder1_Logincontrol1_LoginBtn").click()
                 day = True
-            driver.refresh()
-            
+            driver.refresh()            
             time.sleep(randint(60,100))
             getCurrentData()
             heizung()
             time.sleep(8)
             getCurrentData()
-            heizstab()
+            heizstabt()
 
             # if (float(pvproduct)-float(consumption) > 3.0) and float(battery)>=70.0:
             #     heizstab.state= "ON"
@@ -142,6 +145,6 @@ while True:
             day=False
         else:
             time.sleep(randint(300,600))
-    except:
-        print("Error")
+    except Exception as e:
+        print(e)
         day=False
