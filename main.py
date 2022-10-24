@@ -8,9 +8,13 @@ from selenium.webdriver.chrome.options import Options
 import json
 import time
 import re
+import os
 from smartplug import SmartPlug
 import datetime as dt  
+from pyvirtualdisplay import Display
 
+display = Display(visible=0, size=(800, 800))
+display.start()
 
 def isNowInTimePeriod(): 
     now = dt.datetime.now()
@@ -52,7 +56,7 @@ consumption = 0
 battery = 0
 
 day= False
-driver = webdriver.Chrome('./chromedriver', chrome_options=options)
+driver = webdriver.Chrome(os.path.dirname(__file__) + '/chromedriver', options=options)
 
 def heizstab():
     if (float(pvproduct)-float(consumption) > 3.0) and float(battery)>=70.0:
@@ -102,7 +106,7 @@ while True:
         if isNowInTimePeriod():
 
             if day == False:
-                driver = webdriver.Chrome('./chromedriver', chrome_options=options)
+                driver = webdriver.Chrome(os.path.dirname(__file__) + '/chromedriver', options=options)
                 driver.get("https://www.sunnyportal.com/Templates/Start.aspx")
                 time.sleep(3)
                 driver.find_element(By.ID,"txtUserName").send_keys(email)
